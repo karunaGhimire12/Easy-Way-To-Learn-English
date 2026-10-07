@@ -3,7 +3,7 @@ import os
 from datetime  import datetime,timedelta
 
 from passlib.context import CryptContext
-from jose import jwt
+from jose import jwt,JWTError
 from dotenv import load_dotenv 
 
 load_dotenv()
@@ -53,3 +53,25 @@ def create_access_token(data:dict):
         SECRET_KEY,
         algorithm=ALGORITHM
     )
+
+
+#verify access_token 
+
+def verify_access_token(token:str):
+    try:
+        payload=jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM]
+        )
+
+        user_id=payload.get("sub")
+
+        if user_id is None:
+            return None 
+
+        return user_id
+
+    except JWTError:
+        return None 
+
