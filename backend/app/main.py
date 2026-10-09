@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 from .database import engine ,Base
 from  .import models
-from  app.auth.router import router as auth_router
+from  app.router.auth_router import router as auth_router
 
 Base.metadata.create_all(bind=engine)
 app=FastAPI(title="sajilo English API")

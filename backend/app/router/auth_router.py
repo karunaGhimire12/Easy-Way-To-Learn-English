@@ -10,7 +10,8 @@ from app.auth.utils import (
     hash_password,
     verify_password,
     create_access_token,
-    verify_access_token
+    verify_access_token,
+    create_refresh_token
 )
 
 
@@ -90,9 +91,19 @@ def login(user:Userlogin,db:Session=Depends(get_db)):
         }
     )
 
+    refresh_token=create_refresh_token(
+        data={
+            "sub":str(existing_user.id),
+            "email":existing_user.email
+        }
+    )
+
+
+
     return{
         "message":"Login successful",
         "access_token":access_token,
+        "refresh_token":refresh_token,
         "token_type":"bearer"
     }
 

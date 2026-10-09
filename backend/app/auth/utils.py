@@ -14,7 +14,9 @@ ACCESS_TOKEN_EXPIRE_MINUTES=int(
     os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES","30")
 )
 
-
+REFRESH_TOKEN_EXPIRE_DAYS=int(
+    os.getenv("REFRESH_TOKEN_EXPIRE_DAYS","7")
+)
 
 pwd_context=CryptContext(
     schemes=["bcrypt"],
@@ -74,4 +76,25 @@ def verify_access_token(token:str):
 
     except JWTError:
         return None 
+
+
+
+def create_refresh_token(data:dict):
+    to_encode=data.copy()
+    expire=datetime.utcnow()+timedelta(
+        days=REFRESH_TOKEN_EXPIRE_DAYS
+    )
+
+
+    to_encode.update({
+        "exp":expire,
+        "type":"refresh"
+    })
+
+    return jwt.encode(
+        to_encode,
+        SECRET_KEY,
+        algorithm=ALGORITHM
+    )
+
 
