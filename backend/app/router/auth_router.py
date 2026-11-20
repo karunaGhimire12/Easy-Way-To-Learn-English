@@ -1,17 +1,20 @@
 #app/auth/router.py 
-
+from datetime import datetime,timezone
 from fastapi import APIRouter,Depends,HTTPException
 from sqlalchemy.orm import Session 
+from fastapi.security import OAuth2PasswordRequestForm
 
 from app.database import get_db 
-from app.models import User 
-from  app.auth.schemas import UserRegister,Userlogin
+from app.models import User ,RevokedToken
+from  app.auth.schemas import UserRegister,Userlogin,RefreshTokenRequest
 from app.auth.utils import (
     hash_password,
     verify_password,
     create_access_token,
     verify_access_token,
-    create_refresh_token
+    create_refresh_token,
+    verify_refresh_token,
+    decode_refresh_token
 )
 
 
@@ -60,54 +63,53 @@ def register(user:UserRegister,db:Session=Depends(get_db)):
 
 
 @router.post("/login")
-def login(user:Userlogin,db:Session=Depends(get_db)):
-    #find user by email 
-    existing_user=db.query(User).filter(User.email==user.email).first()
+def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
+):
+    # Find user using email
+    existing_user = db.query(User).filter(
+        User.email == form_data.username
+    ).first()
 
     if not existing_user:
         raise HTTPException(
             status_code=401,
-            detail="Invalid email or password "
+            detail="Invalid email or password"
         )
 
-    #check password 
-
+    # Verify password
     if not verify_password(
-        user.password,
+        form_data.password,
         existing_user.password_hash
-
     ):
         raise HTTPException(
             status_code=401,
             detail="Invalid email or password"
         )
 
-
-    #login successful
-    access_token=create_access_token(
+    # Generate access token
+    access_token = create_access_token(
         data={
-            "sub":str(existing_user.id),
-            "email":existing_user.email
+            "sub": str(existing_user.id),
+            "email": existing_user.email
         }
     )
 
-    refresh_token=create_refresh_token(
+    # Generate refresh token
+    refresh_token = create_refresh_token(
         data={
-            "sub":str(existing_user.id),
-            "email":existing_user.email
+            "sub": str(existing_user.id),
+            "email": existing_user.email
         }
     )
 
-
-
-    return{
-        "message":"Login successful",
-        "access_token":access_token,
-        "refresh_token":refresh_token,
-        "token_type":"bearer"
+    return {
+        "message": "Login successful",
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer"
     }
-
-
 
 
 @router.get("/user_details")
@@ -124,3 +126,73 @@ def get_user_details(current_user:User=Depends(get_current_user)):
 
 
 
+@router.post("/refresh")
+
+def refresh_access_token(request:RefreshTokenRequest,
+                         db:Session=Depends(get_db)):
+    user_id=verify_refresh_token(request.refresh_token)
+
+    if user_id is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expire refresh token"
+        )
+    user=db.query(User).filter(User.id==int(user_id)).first()
+
+    if user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="User not found"
+        )
+
+    access_token=create_access_token(
+        data={"sub":str(user.id),
+              "email":user.email
+              }
+    )
+
+    return {
+        "access_token":access_token,
+        "token_type":"bearer"
+    }
+
+
+
+#Logout 
+@router.post("/logout")
+def logout(
+    request:RefreshTokenRequest,
+    db:Session=Depends(get_db)
+):
+
+
+    payload=decode_refresh_token(request.refresh_token)
+
+    if payload is None:
+        raise HTTPException(
+            status_code=401,
+            details="Invalid or expire refresh token"
+        )
+
+
+    token_jti=payload.get("jti")
+
+    existing_token=db.query(RevokedToken).filter(
+        RevokedToken.jti==token_jti
+    ).first()
+
+    if existing_token:
+        return{"message":"Already logged out"}
+
+    revoked_token=RevokedToken(
+        jti=token_jti,
+        expire_at=datetime.fromtimestamp(
+            payload["exp"],
+            tz=timezone.utc
+        )
+    )
+
+    db.add(revoked_token)
+    db.commit()
+
+    return {"message":"LOgout Successful"}

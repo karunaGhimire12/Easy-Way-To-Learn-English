@@ -10,3 +10,7 @@ class UserRegister(BaseModel):
 class Userlogin(BaseModel):
     email:EmailStr
     password:str
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token:str

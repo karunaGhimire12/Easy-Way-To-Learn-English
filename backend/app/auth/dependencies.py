@@ -26,7 +26,7 @@ def get_current_user(
 
     user=db.query(User).filter(
         User.id==int(user_id)
-    ).filter()
+    ).first()
 
 
 
