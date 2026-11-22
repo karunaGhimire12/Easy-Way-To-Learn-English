@@ -112,6 +112,8 @@ def login(
     }
 
 
+
+
 @router.get("/user_details")
 
 def get_user_details(current_user:User=Depends(get_current_user)):
@@ -126,18 +128,40 @@ def get_user_details(current_user:User=Depends(get_current_user)):
 
 
 
+
 @router.post("/refresh")
+def refresh_access_token(
+    request: RefreshTokenRequest,
+    db: Session = Depends(get_db)
+):
+    #  Decode and validate the old refresh token
+    payload = decode_refresh_token(request.refresh_token)
 
-def refresh_access_token(request:RefreshTokenRequest,
-                         db:Session=Depends(get_db)):
-    user_id=verify_refresh_token(request.refresh_token)
-
-    if user_id is None:
+    if payload is None:
         raise HTTPException(
             status_code=401,
-            detail="Invalid or expire refresh token"
+            detail="Invalid or expired refresh token"
         )
-    user=db.query(User).filter(User.id==int(user_id)).first()
+
+    # Extract information from the token
+    user_id = payload.get("sub")
+    token_jti = payload.get("jti")
+
+    # Check whether the old token is already revoked
+    revoked_token = db.query(RevokedToken).filter(
+        RevokedToken.jti == token_jti
+    ).first()
+
+    if revoked_token:
+        raise HTTPException(
+            status_code=401,
+            detail="Refresh token has been revoked"
+        )
+
+    # Check whether the user exists
+    user = db.query(User).filter(
+        User.id == int(user_id)
+    ).first()
 
     if user is None:
         raise HTTPException(
@@ -145,15 +169,41 @@ def refresh_access_token(request:RefreshTokenRequest,
             detail="User not found"
         )
 
-    access_token=create_access_token(
-        data={"sub":str(user.id),
-              "email":user.email
-              }
+    # Revoke the old refresh token
+    old_token = RevokedToken(
+        jti=token_jti,
+        expires_at=datetime.fromtimestamp(
+            payload["exp"],
+            tz=timezone.utc
+        )
     )
 
+    db.add(old_token)
+
+    #Generate a new access token
+    new_access_token = create_access_token(
+        data={
+            "sub": str(user.id),
+            "email": user.email
+        }
+    )
+
+    #Generate a new refresh token
+    new_refresh_token = create_refresh_token(
+        data={
+            "sub": str(user.id),
+            "email": user.email
+        }
+    )
+
+    #Save the old token's revocation
+    db.commit()
+
+    #Return both new tokens
     return {
-        "access_token":access_token,
-        "token_type":"bearer"
+        "access_token": new_access_token,
+        "refresh_token": new_refresh_token,
+        "token_type": "bearer"
     }
 
 
@@ -176,6 +226,9 @@ def logout(
 
 
     token_jti=payload.get("jti")
+    user_id=payload.get("sub")
+
+#Check wheather old token was already revoked 
 
     existing_token=db.query(RevokedToken).filter(
         RevokedToken.jti==token_jti
@@ -186,7 +239,7 @@ def logout(
 
     revoked_token=RevokedToken(
         jti=token_jti,
-        expire_at=datetime.fromtimestamp(
+        expires_at=datetime.fromtimestamp(
             payload["exp"],
             tz=timezone.utc
         )
@@ -195,4 +248,4 @@ def logout(
     db.add(revoked_token)
     db.commit()
 
-    return {"message":"LOgout Successful"}
+    return {"message":"Logout Successful"}

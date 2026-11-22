@@ -55,7 +55,7 @@ def create_access_token(data:dict):
     return jwt.encode(
         to_encode,
         SECRET_KEY,
-        algorithm=[ALGORITHM]
+        algorithm=ALGORITHM
     )
 
 
@@ -66,7 +66,7 @@ def verify_access_token(token:str):
         payload=jwt.decode(
             token,
             SECRET_KEY,
-            algorithms=[ALGORITHM]
+            algorithms=ALGORITHM
         )
 
         if payload.get("type") != "access":
@@ -105,7 +105,7 @@ def create_refresh_token(data:dict):
     return jwt.encode(
         to_encode,
         SECRET_KEY,
-        algorithm=[ALGORITHM]
+        algorithm=ALGORITHM
     )
 
 
