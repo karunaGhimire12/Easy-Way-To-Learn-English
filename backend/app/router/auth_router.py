@@ -6,7 +6,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from app.database import get_db 
 from app.models import User ,RevokedToken
-from  app.auth.schemas import UserRegister,Userlogin,RefreshTokenRequest
+from  app.schemas import UserRegister,Userlogin,RefreshTokenRequest
 from app.auth.utils import (
     hash_password,
     verify_password,
