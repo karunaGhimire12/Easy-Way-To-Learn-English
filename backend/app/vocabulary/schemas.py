@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+
 class VocabularyCreate(BaseModel):
     word:str
     meaning:str
@@ -6,7 +7,6 @@ class VocabularyCreate(BaseModel):
     antonyms:str|None=None
     example_sentences:str|None=None
     level:str="Beginner"
-
 
 
 class VocabularyResponse(BaseModel):

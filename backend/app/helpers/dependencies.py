@@ -1,9 +1,11 @@
+#backend/app/helpers/dependencies.py 
+
 from fastapi import Depends,HTTPException
 from fastapi.security import OAuth2PasswordBearer
 
 from  app.database import get_db
 from app.models import User 
-from app.auth.utils import verify_access_token
+from app.auth.security import verify_access_token
 from sqlalchemy.orm import Session
 
 
