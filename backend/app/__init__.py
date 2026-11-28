@@ -1,2 +1,8 @@
 from .database  import engine,SessionLocal,Base,get_db
-from .models import User
+from .models import (
+    User ,
+    Vocabulary,
+    VocabularyDefinition,
+    VocabularyPronunciation,
+    VocabularyRelation
+)

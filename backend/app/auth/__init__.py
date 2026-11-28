@@ -14,3 +14,7 @@ from .security import (
                         verify_refresh_token,
                         decode_refresh_token
                     )
+
+
+
+from .router import router as auth_router

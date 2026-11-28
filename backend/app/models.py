@@ -47,14 +47,14 @@ class Vocabulary(Base):
     definitions=relationship(
         "VocabularyDefinition",
         back_populates="vocabulary",
-        cascade="all,delete-orphan"
+        cascade="all, delete-orphan"
     )
 
 
     pronunciations=relationship(
         "VocabularyPronunciation",
         back_populates="vocabulary",
-        cascade="all,delete-orphan"
+        cascade="all, delete-orphan"
     )
 
 
